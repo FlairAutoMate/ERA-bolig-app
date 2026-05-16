@@ -1,0 +1,8 @@
+{
+  "name": "ERA — AI Property OS",
+  "description": "An AI-native property operating system with a Scandinavian premium UI/UX, cinematic architecture, and ambient intelligence for homeowners.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": []
+}
