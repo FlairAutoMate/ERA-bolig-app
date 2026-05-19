@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Camera, Home, Calendar, BookOpen, Sparkles, LogOut, User, ChevronRight, Plus, ArrowRight, Clock, FileText, X, Check, MapPin, Activity, Shield, ArrowUpRight, Fingerprint, Droplets, Zap, Wifi, AlertTriangle } from 'lucide-react';
+import { Camera, Home, Calendar, BookOpen, Sparkles, LogOut, User, ChevronRight, Plus, ArrowRight, Clock, FileText, X, Check, MapPin, Activity, Shield, ArrowUpRight, Fingerprint, Droplets, Zap, Wifi, AlertTriangle, Bell, FileDown } from 'lucide-react';
 import { motion, AnimatePresence, useScroll, useTransform } from 'motion/react';
+
+import { DataModelOverlay } from './components/DataModelOverlay';
 
 function MagneticButton({ children, onClick, className, disabled }: any) {
   const ref = React.useRef<HTMLButtonElement>(null);
@@ -45,6 +47,8 @@ export default function App() {
   const [isDocUploadOpen, setIsDocUploadOpen] = useState(false);
   const [hasOnboarded, setHasOnboarded] = useState(false);
   const [activeProjectBrief, setActiveProjectBrief] = useState<string | null>(null);
+
+  const [isDataModelOpen, setIsDataModelOpen] = useState(false);
 
   const [maintenanceScore, setMaintenanceScore] = useState(92);
   const [hasRequestedQuotes, setHasRequestedQuotes] = useState(false);
@@ -117,6 +121,18 @@ export default function App() {
     setMaintenanceScore(95);
   };
 
+  const tabs = ['hjem', 'plan', 'journal', 'era'];
+  const currentIndex = tabs.indexOf(activeTab);
+
+  const handleDragEnd = (e: any, { offset, velocity }: any) => {
+    const swipe = offset.x * velocity.x;
+    if (swipe < -5000 && currentIndex < tabs.length - 1) {
+      setActiveTab(tabs[currentIndex + 1]);
+    } else if (swipe > 5000 && currentIndex > 0) {
+      setActiveTab(tabs[currentIndex - 1]);
+    }
+  };
+
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
@@ -127,12 +143,11 @@ export default function App() {
 
   const renderContent = () => {
     switch(activeTab) {
-      case 'hjem': return <HomeTab key="hjem" maintenanceScore={maintenanceScore} onOpenDocUpload={() => setIsDocUploadOpen(true)} onOpenCamera={() => setIsCameraOpen(true)} onOpenProjectBrief={() => setActiveProjectBrief('maling')} />;
-      case 'plan': return <PlanTab key="plan" hasRequestedQuotes={hasRequestedQuotes} acceptedQuote={acceptedQuoteId} onAcceptQuote={setAcceptedQuoteId} onOpenProjectBrief={(id) => setActiveProjectBrief(id)} />;
-      case 'dna': return <DnaTab key="dna" />;
+      case 'hjem': return <HomeTab key="hjem" maintenanceScore={maintenanceScore} onOpenDocUpload={() => setIsDocUploadOpen(true)} onOpenCamera={() => setIsCameraOpen(true)} onOpenProjectBrief={() => setActiveProjectBrief('maling')} onOpenDataModel={() => setIsDataModelOpen(true)} />;
+      case 'plan': return <PlanTab key="plan" hasRequestedQuotes={hasRequestedQuotes} acceptedQuote={acceptedQuoteId} onAcceptQuote={setAcceptedQuoteId} onOpenProjectBrief={(id) => setActiveProjectBrief(id)} onOpenDataModel={() => setIsDataModelOpen(true)} />;
       case 'journal': return <JournalTab key="journal" timeline={journalTimeline} onOpenDocUpload={() => setIsDocUploadOpen(true)} />;
       case 'era': return <EraTab key="era" onOpenProjectBrief={() => setActiveProjectBrief('maling')} />;
-      default: return <HomeTab key="hjem" maintenanceScore={maintenanceScore} onOpenDocUpload={() => setIsDocUploadOpen(true)} onOpenCamera={() => setIsCameraOpen(true)} onOpenProjectBrief={() => setActiveProjectBrief('maling')} />;
+      default: return <HomeTab key="hjem" maintenanceScore={maintenanceScore} onOpenDocUpload={() => setIsDocUploadOpen(true)} onOpenCamera={() => setIsCameraOpen(true)} onOpenProjectBrief={() => setActiveProjectBrief('maling')} onOpenDataModel={() => setIsDataModelOpen(true)} />;
     }
   }
 
@@ -178,9 +193,17 @@ export default function App() {
       </header>
 
       {/* MAIN CONTENT */}
-      <AnimatePresence mode="wait">
-         {renderContent()}
-      </AnimatePresence>
+      <motion.div
+        drag="x"
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={0.2}
+        onDragEnd={handleDragEnd}
+        className="w-full"
+      >
+        <AnimatePresence mode="wait">
+           {renderContent()}
+        </AnimatePresence>
+      </motion.div>
 
       <AnimatePresence>
         {isCameraOpen && (
@@ -194,6 +217,9 @@ export default function App() {
         )}
         {activeProjectBrief && (
            <ProjectBriefOverlay onClose={() => setActiveProjectBrief(null)} onRequestQuotes={() => { setHasRequestedQuotes(true); setActiveProjectBrief(null); setActiveTab('plan'); }} />
+        )}
+        {isDataModelOpen && (
+           <DataModelOverlay onClose={() => setIsDataModelOpen(false)} />
         )}
       </AnimatePresence>
 
@@ -211,11 +237,6 @@ export default function App() {
             {hasRequestedQuotes && !acceptedQuoteId && quotesArrived && (
               <span className="absolute -top-1 -right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
             )}
-          </motion.button>
-
-          <motion.button whileTap={{ scale: 0.9 }} onClick={() => setActiveTab('dna')} className={`flex flex-col items-center gap-1.5 transition-colors ${activeTab === 'dna' ? 'text-deep-navy' : 'text-deep-navy/30 hover:text-deep-navy/60'}`}>
-            <Fingerprint size={22} strokeWidth={activeTab === 'dna' ? 2 : 1.5} />
-            <span className="text-[9px] uppercase font-bold tracking-[0.15em] block">DNA</span>
           </motion.button>
 
           {/* PRIMARY CAMERA CTA */}
@@ -453,19 +474,16 @@ function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
             <div className="space-y-4">
               <div className="text-[10px] uppercase font-bold tracking-[0.3em] text-deep-navy/40">Eiendom lokalisert</div>
               <h2 className="text-4xl font-display text-deep-navy tracking-tight">Myrerveien 46A</h2>
-              <p className="text-lg text-deep-navy/60 font-light">
-                Rekkehus (2018). ERA Vedlikeholdsindeks generert.
-              </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 pb-6 border-b border-deep-navy/5">
-               <div className="bg-soft-beige p-6 text-center space-y-2">
-                 <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-deep-navy/40">Grunnlag</div>
-                 <div className="text-xl font-medium text-deep-navy">BBR / Ambita</div>
+            <div className="space-y-4 pb-6 border-b border-deep-navy/5 text-left">
+               <div className="flex justify-between items-center bg-soft-beige p-4">
+                 <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-deep-navy/40">Matrikkel ID</div>
+                 <div className="text-sm font-medium text-deep-navy">0301-54/1210</div>
                </div>
-               <div className="bg-soft-beige p-6 text-center space-y-2">
-                 <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-deep-navy/40">Indeks</div>
-                 <div className="text-xl font-medium text-green-700">92/100</div>
+               <div className="flex justify-between items-center bg-soft-beige p-4">
+                 <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-deep-navy/40">Verifisert Hjemmelshaver</div>
+                 <div className="text-sm font-medium text-deep-navy">Lars-Henrik Sand</div>
                </div>
             </div>
 
@@ -594,7 +612,7 @@ function DocumentAnalyzerOverlay({ onClose, onArchive, onOpenProjectBrief }: { o
 }
 
 
-function HomeTab({ maintenanceScore, onOpenCamera, onOpenDocUpload, onOpenProjectBrief }: { key?: string, maintenanceScore: number, onOpenCamera?: () => void, onOpenDocUpload?: () => void, onOpenProjectBrief?: () => void }) {
+function HomeTab({ maintenanceScore, onOpenCamera, onOpenDocUpload, onOpenProjectBrief, onOpenDataModel }: { maintenanceScore: number, onOpenCamera?: () => void, onOpenDocUpload?: () => void, onOpenProjectBrief?: () => void, onOpenDataModel?: () => void }) {
   const { scrollY } = useScroll();
   const y = useTransform(scrollY, [0, 1000], [0, 200]);
 
@@ -629,72 +647,39 @@ function HomeTab({ maintenanceScore, onOpenCamera, onOpenDocUpload, onOpenProjec
            </div>
         </section>
 
-        {/* ERA VEDLIKEHOLDSINDEKS */}
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-24 items-center">
-           <div className="space-y-10">
-              <div className="space-y-4">
-                <div className="text-[10px] uppercase font-bold tracking-[0.3em] text-deep-navy/40 flex items-center gap-3">
-                  <Activity size={14} className="text-muted-gold" />
-                  <span>Teknisk Tilstand</span>
-                </div>
-                <h2 className="text-4xl lg:text-5xl font-display text-deep-navy tracking-tight">ERA Vedlikeholdsindeks</h2>
-                <p className="text-lg font-light text-deep-navy/60 leading-relaxed text-balance">
-                  Basert på registerdata, AI-bildeanalyse fra forrige uke, og historisk vedlikehold. Rangert som utmerket, ingen akutte tiltak anbefalt.
-                </p>
+        {/* KPI CARDS */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+           {/* Score KPI */}
+           <div className="p-6 border border-deep-navy/10 bg-white shadow-sm flex flex-col gap-4 group cursor-pointer hover:border-deep-navy/30 transition-colors" onClick={onOpenDataModel}>
+              <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-deep-navy/40 flex justify-between items-center">
+                <span>ERA Vedlikeholdsindeks</span>
+                <Activity size={14} className="text-muted-gold" />
               </div>
-
-              <div className="grid grid-cols-2 gap-px bg-deep-navy/5 border border-deep-navy/5">
-                 <div className="bg-warm-ivory p-6 space-y-2">
-                    <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-deep-navy/40">Vision Engine (40%)</div>
-                    <div className="text-sm font-medium text-deep-navy">Ingen avvik funnet</div>
-                 </div>
-                 <div className="bg-warm-ivory p-6 space-y-2">
-                    <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-deep-navy/40">Register (25%)</div>
-                    <div className="text-sm font-medium text-deep-navy">Byggeår 2018 (TEK17)</div>
-                 </div>
-                 <div className="bg-warm-ivory p-6 space-y-2">
-                    <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-deep-navy/40">Historikk (25%)</div>
-                    <div className="text-sm font-medium text-deep-navy">Verifisert m/ ERA</div>
-                 </div>
-                 <div className="bg-warm-ivory p-6 space-y-2">
-                    <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-deep-navy/40">Intervaller (10%)</div>
-                    <div className="text-sm font-medium text-deep-navy">Alle innen frist</div>
-                 </div>
+              <div className="flex items-end gap-3 mt-4">
+                  <div className="text-5xl font-display text-deep-navy tracking-tight leading-none">{maintenanceScore}<span className="text-2xl text-deep-navy/40">/100</span></div>
+                  <div className="text-xs font-bold uppercase tracking-wider text-green-700 mb-1">Utmerket</div>
               </div>
            </div>
 
-           <div className="relative aspect-square sm:aspect-auto sm:h-[400px] flex items-center justify-center lg:justify-end">
-              <div className="relative w-64 h-64 lg:w-80 lg:h-80 flex items-center justify-center">
-                 {/* Decorative rings */}
-                 <div className="absolute inset-0 border-[1px] border-deep-navy/5 rounded-full" />
-                 <div className="absolute top-4 bottom-4 left-4 right-4 border-[1px] border-deep-navy/10 rounded-full border-dashed" />
-                 
-                 {/* Progress Ring */}
-                 <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="48" fill="none" stroke="currentColor" strokeWidth="2" className="text-deep-navy/5" />
-                    <motion.circle 
-                      key={maintenanceScore}
-                      initial={{ strokeDasharray: "301.59", strokeDashoffset: "301.59" }}
-                      animate={{ strokeDashoffset: `${301.59 - (301.59 * maintenanceScore) / 100}` }}
-                      transition={{ duration: 2, ease: "easeOut", delay: 0.5 }}
-                      cx="50" cy="50" r="48" fill="none" stroke="currentColor" strokeWidth="4" 
-                      className="text-green-600 drop-shadow-xl"
-                    />
-                 </svg>
-
-                 {/* Score */}
-                 <div className="text-center space-y-1 z-10 bg-warm-ivory w-40 h-40 rounded-full flex flex-col items-center justify-center shadow-2xl">
-                    <div className="text-5xl font-display text-deep-navy tracking-tight">{maintenanceScore}<span className="text-xl text-deep-navy/30">/100</span></div>
-                    <div className="text-[11px] uppercase font-bold tracking-[0.2em] text-green-700">Utmerket</div>
-                 </div>
+           {/* Potensielt Verdiløft KPI */}
+           <div className="p-6 border border-deep-navy/10 bg-white shadow-sm flex flex-col gap-4 group cursor-pointer hover:border-deep-navy/30 transition-colors" onClick={onOpenDataModel}>
+              <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-deep-navy/40 flex justify-between items-center">
+                <span>Potensielt Verdiløft</span>
+                <Sparkles size={14} className="text-muted-gold" />
+              </div>
+              <div className="mt-auto">
+                  <div className="text-2xl font-display text-deep-navy tracking-tight pt-2">130k - 180k,-</div>
+                  <div className="text-xs font-light text-deep-navy/60 mt-1">Estimert over 12 mnd (veiledende)</div>
               </div>
            </div>
 
-           <div className="lg:col-span-2 flex justify-center mt-8">
-             <button onClick={onOpenProjectBrief} className="text-[11px] uppercase font-bold tracking-[0.2em] px-8 py-5 border border-deep-navy/20 hover:bg-deep-navy/5 transition-colors text-deep-navy flex items-center gap-3">
-               <span>Se anbefalte tiltak for å score høyere</span>
-               <ArrowRight size={14} />
-             </button>
+           {/* Neste Uløste Oppgave KPI */}
+           <div className="p-6 border border-deep-navy/10 bg-white shadow-sm flex flex-col gap-4">
+              <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-deep-navy/40">Neste Uløste Oppgave</div>
+              <div className="mt-auto">
+                  <div className="font-display text-deep-navy text-2xl tracking-tight pt-2">Rens takrenner</div>
+                  <div className="text-xs font-light text-deep-navy/60 mt-1">Før høstens første uvær.</div>
+              </div>
            </div>
         </section>
 
@@ -703,9 +688,32 @@ function HomeTab({ maintenanceScore, onOpenCamera, onOpenDocUpload, onOpenProjec
            <div className="absolute top-0 right-0 w-64 h-64 bg-mild-clay/10 rounded-bl-full -z-10" />
            <div className="flex items-start justify-between gap-8 flex-col sm:flex-row">
               <div className="space-y-4 max-w-xl">
-                 <div className="text-[10px] uppercase font-bold tracking-[0.3em] text-deep-navy/40 flex items-center gap-3">
-                   <AlertTriangle size={14} className="text-[#FF5B24]" />
-                   <span>Sesongvarsel & Forebygging</span>
+                 <div className="flex items-center justify-between gap-6">
+                   <div className="text-[10px] uppercase font-bold tracking-[0.3em] text-deep-navy/40 flex items-center gap-3">
+                     <AlertTriangle size={14} className="text-[#FF5B24]" />
+                     <span>Sesongvarsel & Forebygging</span>
+                   </div>
+                   <button 
+                     onClick={() => {
+                       if (window.Notification && Notification.permission !== "denied") {
+                         Notification.requestPermission().then(permission => {
+                           if (permission === "granted") {
+                             new Notification("ERA: Frostvarsel for Myrerveien 46A", {
+                               body: "Det er meldt -3°C i natt. Husk å stenge og tømme utekranen for vinteren for å unngå frostsprengte rør."
+                             });
+                           } else {
+                             alert("Eksempel på push-varsel til telefon: 'ERA: Det er meldt -3°C i natt. Husk å stenge og tømme utekranen.'");
+                           }
+                         });
+                       } else {
+                         alert("Eksempel på push-varsel til telefon: 'ERA: Det er meldt -3°C i natt. Husk å stenge og tømme utekranen.'");
+                       }
+                     }}
+                     className="flex items-center gap-2 text-[9px] uppercase font-bold tracking-[0.2em] bg-white border border-deep-navy/10 px-3 py-1.5 rounded-full hover:bg-deep-navy/5 text-deep-navy cursor-pointer transition-colors shadow-sm hover:shadow-md"
+                   >
+                     <Bell size={12} className="text-[#FF5B24]" />
+                     <span className="hidden sm:inline">Aktiver Push-varsel</span>
+                   </button>
                  </div>
                  <h2 className="text-3xl lg:text-4xl font-display text-deep-navy tracking-tight">Kaldfront på vei. Frost i natt.</h2>
                  <p className="text-base text-deep-navy/60 font-light leading-relaxed">
@@ -722,18 +730,7 @@ function HomeTab({ maintenanceScore, onOpenCamera, onOpenDocUpload, onOpenProjec
               </div>
            </div>
            
-           <div className="flex gap-4 overflow-x-auto pb-4 hide-scrollbar snap-x">
-             {/* Andre kommende varsler */}
-             <div className="min-w-[280px] w-[280px] p-6 border border-deep-navy/10 bg-white/50 space-y-4 snap-start">
-                <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-deep-navy/40">Neste Uløste Oppgave</div>
-                <div className="font-medium text-deep-navy text-lg">Rens takrenner</div>
-                <div className="text-sm font-light text-deep-navy/60">Anbefales før høstens første større uvær.</div>
-             </div>
-             <div className="min-w-[280px] w-[280px] p-6 border border-deep-navy/10 bg-white/50 space-y-4 snap-start opacity-75">
-                <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-deep-navy/40">Fremtidig (November)</div>
-                <div className="font-medium text-deep-navy text-lg">Sjekk brannvarslere</div>
-                <div className="text-sm font-light text-deep-navy/60">Batteribytte og test før desember.</div>
-             </div>
+           <div className="flex gap-4">
            </div>
         </section>
 
@@ -810,7 +807,7 @@ function HomeTab({ maintenanceScore, onOpenCamera, onOpenDocUpload, onOpenProjec
   );
 }
 
-function PlanTab({ hasRequestedQuotes, quotesArrived, acceptedQuote, onAcceptQuote, onOpenProjectBrief }: { key?: string, hasRequestedQuotes?: boolean, quotesArrived?: boolean, acceptedQuote?: string | null, onAcceptQuote?: (id: string) => void, onOpenProjectBrief?: (id: string) => void }) {
+function PlanTab({ hasRequestedQuotes, quotesArrived, acceptedQuote, onAcceptQuote, onOpenProjectBrief, onOpenDataModel }: { hasRequestedQuotes?: boolean, quotesArrived?: boolean, acceptedQuote?: string | null, onAcceptQuote?: (id: string) => void, onOpenProjectBrief?: (id: string) => void, onOpenDataModel?: () => void }) {
   const [isGenerating, setIsGenerating] = useState(false);
 
   return (
@@ -1050,11 +1047,16 @@ function PlanTab({ hasRequestedQuotes, quotesArrived, acceptedQuote, onAcceptQuo
               </div>
            </div>
            
-           <div className="bg-warm-ivory/50 border border-deep-navy/10 p-5 rounded-sm flex items-start gap-4 mt-8">
+           <div className="bg-warm-ivory/50 border border-deep-navy/10 p-5 rounded-sm flex flex-col md:flex-row items-start gap-4 mt-8">
              <Shield size={18} className="text-deep-navy/40 shrink-0 mt-0.5" />
-             <p className="text-xs font-light text-deep-navy/60 leading-relaxed text-balance">
-               <strong className="font-medium text-deep-navy/80 tracking-wide uppercase text-[10px]">Ansvarsfraskrivelse:</strong> Tallene vist ovenfor er kalkulerte gjennomsnittsestimater levert av ERA-modellen. Dette utgjør <em>ikke</em> finansiell, juridisk, eller forsikringsteknisk rådgivning. Utgifter, støttesatser, ROI og endelig energibesparelse vil avvike basert på reelle markedsforhold, valgt leverandør, lokal geografi, og faktisk forbruksmønster. For nøyaktig pris anbefales det alltid å innhente kvalifiserte tilbud.
-             </p>
+             <div className="flex-1">
+               <p className="text-xs font-light text-deep-navy/60 leading-relaxed text-balance">
+                 <strong className="font-medium text-deep-navy/80 tracking-wide uppercase text-[10px]">Ansvarsfraskrivelse:</strong> Tallene vist ovenfor er kalkulerte gjennomsnittsestimater levert av ERA-modellen. Dette utgjør <em>ikke</em> finansiell, juridisk, eller forsikringsteknisk rådgivning. Utgifter, støttesatser, ROI og endelig energibesparelse vil avvike basert på reelle markedsforhold, valgt leverandør, lokal geografi, og faktisk forbruksmønster. For nøyaktig pris anbefales det alltid å innhente kvalifiserte tilbud.
+               </p>
+               <button onClick={onOpenDataModel} className="mt-4 flex items-center gap-2 text-[10px] uppercase font-bold tracking-[0.2em] text-muted-gold hover:text-deep-navy transition-colors">
+                 Se Datagrunnlag & Kilder
+               </button>
+             </div>
            </div>
         </section>
 
@@ -1067,7 +1069,7 @@ function PlanTab({ hasRequestedQuotes, quotesArrived, acceptedQuote, onAcceptQuo
   )
 }
 
-function DnaTab({ key }: { key?: string }) {
+function DnaTab() {
   return (
     <motion.main 
       initial={{ opacity: 0, y: 10 }}
@@ -1163,11 +1165,22 @@ function DnaTab({ key }: { key?: string }) {
                  <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-deep-navy/60">Sikringsskap</div>
                  <div className="text-base text-deep-navy font-medium">I entré bak speilskap.</div>
                  <div className="text-xs font-light text-deep-navy/60 leading-relaxed mt-2">Hovedsikring 63A. Automatsikringer jordfeilbryter kl. A på alle 16 kurser.</div>
+                 <button className="mt-4 flex items-center gap-2 text-[10px] uppercase font-bold tracking-[0.2em] text-muted-gold hover:text-deep-navy transition-colors">
+                   <FileDown size={14} /> Samsvarserklæring (2018)
+                 </button>
               </div>
-              <div className="bg-mild-clay/10 p-6 border border-mild-clay/20 space-y-3 sm:col-span-2">
+              <div className="bg-mild-clay/10 p-6 border border-mild-clay/20 space-y-3 sm:col-span-2 relative group hover:border-deep-navy/20 transition-colors">
                  <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-deep-navy/60">Ventilasjon (Balansert)</div>
                  <div className="text-base text-deep-navy font-medium">Villavent Flexit UNI 3</div>
                  <div className="text-xs font-light text-deep-navy/60 leading-relaxed mt-2">Aggregat plassert på mørkeloft. Filter: G4 (Art nr. 116422). Skiftes 2 ggr. i året.</div>
+                 <div className="pt-4 mt-2 border-t border-deep-navy/5 flex gap-4">
+                   <button className="flex items-center gap-2 text-[10px] uppercase font-bold tracking-[0.2em] text-muted-gold hover:text-deep-navy transition-colors">
+                     <FileDown size={14} /> Brukermanual
+                   </button>
+                   <button className="flex items-center gap-2 text-[10px] uppercase font-bold tracking-[0.2em] text-muted-gold hover:text-deep-navy transition-colors">
+                     <FileDown size={14} /> Monteringsanvisning
+                   </button>
+                 </div>
               </div>
            </div>
         </div>
@@ -1413,6 +1426,8 @@ function ProjectBriefOverlay({ onClose, onRequestQuotes }: { onClose: () => void
 
 
 function CraftsmanBriefView({ onClose }: { onClose: () => void }) {
+  const [activeTab, setActiveTab] = useState<'nye' | 'aktive' | 'fdv'>('nye');
+
   return (
     <motion.div 
       initial={{ opacity: 0 }}
@@ -1421,87 +1436,159 @@ function CraftsmanBriefView({ onClose }: { onClose: () => void }) {
       className="fixed inset-0 z-[100] bg-midnight text-warm-ivory flex flex-col overflow-y-auto"
     >
        <div className="sticky top-0 z-10 flex justify-between items-center p-6 lg:p-10 bg-midnight/90 backdrop-blur-md border-b border-white/5">
-          <div className="text-[10px] uppercase font-bold tracking-[0.3em] text-white/40 flex items-center gap-3">
-             <span className="w-2 h-2 bg-muted-gold rounded-full" />
-             Leverandørvisning
+          <div className="flex items-center gap-6">
+            <div className="text-[10px] uppercase font-bold tracking-[0.3em] text-white/40 flex items-center gap-3">
+               <span className="w-2 h-2 bg-muted-gold rounded-full" />
+               Bedriftsportal: Malermester Hansen
+            </div>
+            <div className="hidden sm:flex gap-4 ml-8">
+              <button onClick={() => setActiveTab('nye')} className={`text-[10px] uppercase font-bold tracking-[0.2em] transition-colors pb-1 ${activeTab === 'nye' ? 'text-muted-gold border-b border-muted-gold' : 'text-white/40 hover:text-white'}`}>Nye Forespørsler</button>
+              <button onClick={() => setActiveTab('aktive')} className={`text-[10px] uppercase font-bold tracking-[0.2em] transition-colors pb-1 ${activeTab === 'aktive' ? 'text-muted-gold border-b border-muted-gold' : 'text-white/40 hover:text-white'}`}>Aktive Oppdrag (2)</button>
+              <button onClick={() => setActiveTab('fdv')} className={`text-[10px] uppercase font-bold tracking-[0.2em] transition-colors pb-1 ${activeTab === 'fdv' ? 'text-muted-gold border-b border-muted-gold' : 'text-white/40 hover:text-white'}`}>FDV Leveransesenter</button>
+            </div>
           </div>
           <button onClick={onClose} className="p-3 bg-white/5 hover:bg-white/10 transition-colors rounded-full text-white">
              <X size={20} />
           </button>
        </div>
 
-       <div className="flex-1 max-w-4xl mx-auto w-full px-6 lg:px-12 py-16 lg:py-24 space-y-16">
-          <div className="space-y-6">
-             <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-muted-gold">Nytt Oppdrag Gitt Ut</div>
-             <h1 className="text-4xl lg:text-6xl font-display font-medium text-white tracking-tight leading-tight">
-               Maling av sør- og vestfasade.
-             </h1>
-             <p className="text-xl text-white/50 font-light text-balance max-w-2xl">
-               Myrerveien 46A, 0494 Oslo. 
-               <br/>Invitasjon fra Lars-Henrik Sand.
-             </p>
-          </div>
+       <div className="flex-1 max-w-5xl mx-auto w-full px-6 lg:px-12 py-16 space-y-16">
+          {activeTab === 'nye' && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-12">
+              <div className="space-y-6">
+                 <h1 className="text-4xl lg:text-6xl font-display font-medium text-white tracking-tight leading-tight">
+                   Nye Forespørsler.
+                 </h1>
+                 <p className="text-xl text-white/50 font-light text-balance max-w-2xl">
+                   Du har 1 ny henvendelse fra ditt ERA-partnernettverk.
+                 </p>
+              </div>
 
-          <div className="bg-deep-navy p-8 lg:p-12 space-y-12 border border-white/5 shadow-2xl relative">
-             <div className="absolute top-0 right-8 -translate-y-1/2 bg-muted-gold text-deep-navy text-[9px] uppercase font-bold tracking-[0.2em] px-4 py-2 flex items-center gap-2">
-               <Sparkles size={12} />
-               Verifisert ERA-data
-             </div>
+              <div className="bg-deep-navy p-8 lg:p-12 space-y-12 border border-white/5 shadow-2xl relative">
+                 <div className="absolute top-0 right-8 -translate-y-1/2 bg-muted-gold text-deep-navy text-[9px] uppercase font-bold tracking-[0.2em] px-4 py-2 flex items-center gap-2">
+                   <Sparkles size={12} />
+                   Verifisert ERA-data
+                 </div>
 
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-12 border-b border-white/5 pb-12">
-               <div className="space-y-2">
-                  <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-white/40">Objekt</div>
-                  <div className="text-lg font-medium text-white">Rekkehus (Byggeår 2018)</div>
-               </div>
-               <div className="space-y-2">
-                  <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-white/40">Materialer</div>
-                  <div className="text-lg font-medium text-white">Liggende trepaneler</div>
-               </div>
-               <div className="space-y-2">
-                  <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-white/40">Kalkulert Omfang</div>
-                  <div className="text-lg font-medium text-white">43.5 kvm</div>
-               </div>
-               <div className="space-y-2">
-                  <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-white/40">Terrengets Helning</div>
-                  <div className="text-lg font-medium text-white">15 grader (Stillas påkrevd)</div>
-               </div>
-             </div>
+                 <div className="space-y-2">
+                    <h2 className="text-2xl font-display text-white">Maling av sør- og vestfasade</h2>
+                    <p className="text-sm font-light text-white/50">Myrerveien 46A, 0494 Oslo (Lars-Henrik Sand)</p>
+                 </div>
 
-             <div className="space-y-4">
-                <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-white/40">Tilstand og Tiltak</div>
-                <p className="text-lg text-white/80 font-light leading-relaxed">
-                  Tidlig falming av fargepigmenter i nedre felt. Ingen tegn til råte eller fuktskade ifølge nyeste skanning 12. mai. 
-                  Arbeidet krever husvask, skraping av løst virke, grunning på eventuelle bare flekker, og to toppstrøk Jotun 0706.
-                </p>
-             </div>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-12 border-y border-white/5 py-8">
+                   <div className="space-y-2">
+                      <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-white/40">Objekt</div>
+                      <div className="text-lg font-medium text-white">Rekkehus (Byggeår 2018)</div>
+                   </div>
+                   <div className="space-y-2">
+                      <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-white/40">Materialer</div>
+                      <div className="text-lg font-medium text-white">Liggende trepaneler</div>
+                   </div>
+                   <div className="space-y-2">
+                      <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-white/40">Kalkulert Omfang</div>
+                      <div className="text-lg font-medium text-white">43.5 kvm</div>
+                   </div>
+                   <div className="space-y-2">
+                      <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-white/40">Terrengets Helning</div>
+                      <div className="text-lg font-medium text-white">15 grader (Stillas påkrevd)</div>
+                   </div>
+                 </div>
 
-             <div className="flex gap-4">
-               <div className="w-16 h-16 bg-white/5 border border-white/10 flex items-center justify-center text-white/40">
-                 <Camera size={20} />
-               </div>
-               <div className="w-16 h-16 bg-white/5 border border-white/10 flex items-center justify-center text-white/40">
-                 <Camera size={20} />
-               </div>
-               <div className="w-16 h-16 bg-white/5 border border-white/10 flex items-center justify-center text-white/40">
-                 <span className="text-[10px] font-bold">+6</span>
-               </div>
-             </div>
-          </div>
+                 <div className="flex flex-col sm:flex-row gap-4">
+                    <button onClick={() => setActiveTab('aktive')} className="flex-1 bg-muted-gold text-deep-navy px-8 py-4 text-[11px] uppercase font-bold tracking-[0.2em] hover:bg-white transition-colors duration-500 text-center">
+                       Gi Pris & Aksepter
+                    </button>
+                    <button className="px-8 py-4 bg-transparent border border-white/20 text-white text-[11px] uppercase font-bold tracking-[0.2em] hover:bg-white/5 transition-colors duration-500 text-center">
+                       Avslå
+                    </button>
+                 </div>
+              </div>
+            </motion.div>
+          )}
 
-          <div className="flex flex-col sm:flex-row gap-4">
-             <motion.button whileTap={{ scale: 0.98 }} onClick={onClose} className="flex-1 bg-muted-gold text-deep-navy px-8 py-6 text-[11px] uppercase font-bold tracking-[0.2em] hover:bg-white transition-colors duration-500 shadow-xl">
-                Godta oppdrag & gi pris
-             </motion.button>
-             <motion.button whileTap={{ scale: 0.98 }} onClick={onClose} className="px-8 py-6 bg-transparent border border-white/20 text-white text-[11px] uppercase font-bold tracking-[0.2em] hover:bg-white/5 transition-colors duration-500">
-                Avslå
-             </motion.button>
-          </div>
+          {activeTab === 'aktive' && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-12">
+               <div className="space-y-6">
+                 <h1 className="text-4xl lg:text-5xl font-display font-medium text-white tracking-tight leading-tight">
+                   Pågående Oppdrag.
+                 </h1>
+               </div>
+               <div className="grid grid-cols-1 gap-6">
+                 <div className="bg-white/5 border border-white/10 p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                   <div>
+                     <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-white/40 mb-2">Oppstart: Om 2 uker</div>
+                     <div className="text-xl font-medium text-white">Utskifting av kledning (Bakhage)</div>
+                     <div className="text-sm text-white/50">Storgata 12, Oslo</div>
+                   </div>
+                   <button className="text-[10px] uppercase font-bold tracking-[0.2em] px-6 py-3 border border-white/20 text-white hover:bg-white/10 transition-colors">
+                     Se detaljer
+                   </button>
+                 </div>
+               </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'fdv' && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-12">
+               <div className="space-y-6">
+                 <h1 className="text-4xl lg:text-5xl font-display font-medium text-white tracking-tight leading-tight">
+                   Overlevering av FDV.
+                 </h1>
+                 <p className="text-lg text-white/50 font-light max-w-2xl">
+                   Last opp sluttdokumentasjon for ferdigstilte prosjekter. Dokumentene lagres direkte i boligens DNA hos kunden.
+                 </p>
+               </div>
+               
+               <div className="bg-deep-navy border border-white/10 p-8 space-y-8">
+                 <div className="space-y-2 border-b border-white/10 pb-6">
+                   <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-muted-gold">Kunde & Objekt</div>
+                   <div className="text-xl text-white">Myrerveien 46A (Varmepumpe-installasjon)</div>
+                 </div>
+
+                 <div className="border-2 border-dashed border-white/20 rounded-xl p-12 flex flex-col items-center justify-center text-center space-y-4 hover:border-muted-gold/50 hover:bg-white/5 transition-colors cursor-pointer group">
+                   <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center text-white/50 group-hover:text-muted-gold transition-colors">
+                     <FileDown size={24} />
+                   </div>
+                   <div className="space-y-1">
+                     <div className="text-lg font-medium text-white">Last opp FDV-dokumentasjon</div>
+                     <div className="text-sm font-light text-white/50">Dra og slipp PDF, samsvarserklæring, eller manualer</div>
+                   </div>
+                 </div>
+
+                 <div className="space-y-4">
+                   <h3 className="text-sm uppercase font-bold tracking-[0.2em] text-white/60">Opplastet (Klare for overføring)</h3>
+                   <div className="flex items-center justify-between bg-white/5 p-4 border border-white/10">
+                     <div className="flex items-center gap-4">
+                       <FileText size={20} className="text-green-400" />
+                       <div className="text-sm text-white">Samsvarserklæring_Elektro.pdf</div>
+                     </div>
+                     <button className="text-white/40 hover:text-white"><X size={16} /></button>
+                   </div>
+                   <div className="flex items-center justify-between bg-white/5 p-4 border border-white/10">
+                     <div className="flex items-center gap-4">
+                       <FileText size={20} className="text-green-400" />
+                       <div className="text-sm text-white">Brukermanual_Daikin.pdf</div>
+                     </div>
+                     <button className="text-white/40 hover:text-white"><X size={16} /></button>
+                   </div>
+                 </div>
+                 
+                 <div className="pt-6">
+                   <button className="w-full bg-muted-gold text-deep-navy py-4 text-[11px] uppercase font-bold tracking-[0.2em] hover:bg-white transition-colors">
+                     Overfør FDV til Bolig-DNA
+                   </button>
+                 </div>
+               </div>
+
+            </motion.div>
+          )}
+
        </div>
     </motion.div>
   )
 }
 
-function JournalTab({ timeline, onOpenDocUpload }: { key?: string, timeline: any[], onOpenDocUpload?: () => void }) {
+function JournalTab({ timeline, onOpenDocUpload }: { timeline: any[], onOpenDocUpload?: () => void }) {
   return (
     <motion.main 
       initial={{ opacity: 0, y: 10 }}
@@ -1520,7 +1607,7 @@ function JournalTab({ timeline, onOpenDocUpload }: { key?: string, timeline: any
             Boligens Hukommelse.
           </h1>
           <p className="text-xl text-deep-navy/50 font-light max-w-2xl text-balance">
-            En tidslinje over boligens utvikling. Bilder, dokumenter og observasjoner flettet sammen i én historie.
+            En tidslinje over boligens utvikling og en oppdatert teknisk oversikt. Bilder, dokumenter, og observasjoner flettet sammen i én historie.
           </p>
         </div>
 
@@ -1529,6 +1616,142 @@ function JournalTab({ timeline, onOpenDocUpload }: { key?: string, timeline: any
           <span className="text-[11px] uppercase font-bold tracking-[0.2em]">Analyser dokument</span>
         </MagneticButton>
       </section>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-24">
+        {/* Dimensjoner & Fakta */}
+        <div className="space-y-8">
+           <div className="flex items-center gap-3">
+             <Activity className="text-muted-gold" size={18} />
+             <h3 className="text-2xl font-display text-deep-navy">Eiendomsfakta</h3>
+           </div>
+           <div className="grid grid-cols-2 gap-px bg-deep-navy/5 border border-deep-navy/5">
+              <div className="bg-white p-6 space-y-2">
+                <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-deep-navy/40">Byggeår</div>
+                <div className="text-lg font-medium text-deep-navy">2018 (TEK17)</div>
+              </div>
+              <div className="bg-white p-6 space-y-2">
+                <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-deep-navy/40">Bruksareal (BRA)</div>
+                <div className="text-lg font-medium text-deep-navy">135 m²</div>
+              </div>
+              <div className="bg-white p-6 space-y-2">
+                <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-deep-navy/40">Tomt</div>
+                <div className="text-lg font-medium text-deep-navy">Eiet, 452 m²</div>
+              </div>
+              <div className="bg-white p-6 space-y-2">
+                <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-deep-navy/40">Gnr/Bnr</div>
+                <div className="text-lg font-medium text-deep-navy">54 / 1210</div>
+              </div>
+           </div>
+        </div>
+
+        {/* Fargekoder */}
+        <div className="space-y-8">
+           <div className="flex items-center gap-3">
+             <Droplets className="text-muted-gold" size={18} />
+             <h3 className="text-2xl font-display text-deep-navy">Fargekoder (NCS)</h3>
+           </div>
+           <div className="space-y-4">
+             <div className="flex items-center gap-4 bg-white border border-deep-navy/5 p-4 relative overflow-hidden group hover:border-deep-navy/20 transition-colors">
+                <div className="w-12 h-12 rounded-full border border-black/10 shrink-0" style={{ backgroundColor: '#D4CDC1' }} />
+                <div className="flex-1">
+                  <div className="text-sm font-medium text-deep-navy">Stue / Kjøkken</div>
+                  <div className="text-xs font-mono text-deep-navy/50">Jotun 10678 Space (NCS S1502-Y)</div>
+                </div>
+             </div>
+             <div className="flex items-center gap-4 bg-white border border-deep-navy/5 p-4 relative overflow-hidden group hover:border-deep-navy/20 transition-colors">
+                <div className="w-12 h-12 rounded-full border border-black/10 shrink-0" style={{ backgroundColor: '#576766' }} />
+                <div className="flex-1">
+                  <div className="text-sm font-medium text-deep-navy">Hovedsoverom</div>
+                  <div className="text-xs font-mono text-deep-navy/50">Jotun 6352 Evening Green (NCS S6010-B90G)</div>
+                </div>
+             </div>
+             <div className="flex items-center gap-4 bg-white border border-deep-navy/5 p-4 relative overflow-hidden group hover:border-deep-navy/20 transition-colors">
+                <div className="w-12 h-12 rounded-full border border-black/10 shrink-0" style={{ backgroundColor: '#FAFAFA' }} />
+                <div className="flex-1">
+                  <div className="text-sm font-medium text-deep-navy">Lister & Tak</div>
+                  <div className="text-xs font-mono text-deep-navy/50">Klassisk Hvit (NCS S0500-N)</div>
+                </div>
+             </div>
+           </div>
+        </div>
+
+        {/* Teknisk / Rør / Sikringer */}
+        <div className="space-y-8">
+           <div className="flex items-center gap-3">
+             <Zap className="text-muted-gold" size={18} />
+             <h3 className="text-2xl font-display text-deep-navy">Teknisk & Infrastruktur</h3>
+           </div>
+           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="bg-mild-clay/10 p-6 border border-mild-clay/20 space-y-3">
+                 <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-deep-navy/60">Hovedstoppekran</div>
+                 <div className="text-base text-deep-navy font-medium">Under vasken på vaskerom (1. etg)</div>
+                 <div className="text-xs font-light text-deep-navy/60 leading-relaxed mt-2">Sist inspisert: Feb 2024. Rør i rør-system fra 2018. Rørskap i gang nede.</div>
+              </div>
+              <div className="bg-mild-clay/10 p-6 border border-mild-clay/20 space-y-3">
+                 <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-deep-navy/60">Sikringsskap</div>
+                 <div className="text-base text-deep-navy font-medium">I entré bak speilskap.</div>
+                 <div className="text-xs font-light text-deep-navy/60 leading-relaxed mt-2">Hovedsikring 63A. Automatsikringer jordfeilbryter kl. A på alle 16 kurser.</div>
+                 <button className="mt-4 flex items-center gap-2 text-[10px] uppercase font-bold tracking-[0.2em] text-muted-gold hover:text-deep-navy transition-colors">
+                   <FileDown size={14} /> Samsvarserklæring (2018)
+                 </button>
+              </div>
+              <div className="bg-mild-clay/10 p-6 border border-mild-clay/20 space-y-3 sm:col-span-2 relative group hover:border-deep-navy/20 transition-colors">
+                 <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-deep-navy/60">Ventilasjon (Balansert)</div>
+                 <div className="text-base text-deep-navy font-medium">Villavent Flexit UNI 3</div>
+                 <div className="text-xs font-light text-deep-navy/60 leading-relaxed mt-2">Aggregat plassert på mørkeloft. Filter: G4 (Art nr. 116422). Skiftes 2 ggr. i året.</div>
+                 <div className="pt-4 mt-2 border-t border-deep-navy/5 flex gap-4">
+                   <button className="flex items-center gap-2 text-[10px] uppercase font-bold tracking-[0.2em] text-muted-gold hover:text-deep-navy transition-colors">
+                     <FileDown size={14} /> Brukermanual
+                   </button>
+                   <button className="flex items-center gap-2 text-[10px] uppercase font-bold tracking-[0.2em] text-muted-gold hover:text-deep-navy transition-colors">
+                     <FileDown size={14} /> Monteringsanvisning
+                   </button>
+                 </div>
+              </div>
+           </div>
+        </div>
+
+        {/* Abonnementer / Avtaler */}
+        <div className="space-y-8">
+           <div className="flex items-center gap-3">
+             <Wifi className="text-muted-gold" size={18} />
+             <h3 className="text-2xl font-display text-deep-navy">Tilknyttede Tjenester</h3>
+           </div>
+           <div className="flex flex-col gap-4">
+              <div className="flex justify-between items-center bg-white p-5 border border-deep-navy/5">
+                <div>
+                  <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-deep-navy/40">Strømleverandør</div>
+                  <div className="text-sm font-medium text-deep-navy mt-1">Tibber Spotpris</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs text-deep-navy/60">Siden: Okt 2021</div>
+                </div>
+              </div>
+              <div className="flex justify-between items-center bg-white p-5 border border-deep-navy/5">
+                <div>
+                  <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-deep-navy/40">Internett & TV</div>
+                  <div className="text-sm font-medium text-deep-navy mt-1">Telenor (Fiber 500/500)</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs text-deep-navy/60">Bindingstid ute</div>
+                </div>
+              </div>
+              <div className="flex justify-between items-center bg-white p-5 border border-deep-navy/5">
+                <div>
+                  <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-deep-navy/40">Boligforsikring</div>
+                  <div className="text-sm font-medium text-deep-navy mt-1">Gjensidige HUS Super</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs text-deep-navy/60 mt-1">Avtalenr. 841295</div>
+                </div>
+              </div>
+           </div>
+        </div>
+      </div>
+
+      <div className="pt-24 border-t border-deep-navy/10 mt-12 mb-12">
+         <h2 className="text-4xl font-display font-medium text-deep-navy mb-4 text-center">Historikk</h2>
+      </div>
 
       <div className="relative border-l border-deep-navy/10 ml-2 lg:ml-8 pl-8 lg:pl-16 space-y-32 pb-32">
         {timeline.map((group, yearIndex) => (
@@ -1602,7 +1825,7 @@ function JournalTab({ timeline, onOpenDocUpload }: { key?: string, timeline: any
   )
 }
 
-function EraTab({ onOpenProjectBrief }: { key?: string, onOpenProjectBrief?: () => void }) {
+function EraTab({ onOpenProjectBrief }: { onOpenProjectBrief?: () => void }) {
   const [currentIdea, setCurrentIdea] = useState(0);
   const [inputValue, setInputValue] = useState("");
   const [chatMode, setChatMode] = useState(false);
@@ -1661,32 +1884,39 @@ function EraTab({ onOpenProjectBrief }: { key?: string, onOpenProjectBrief?: () 
 
   return (
     <motion.main 
-      initial={{ opacity: 0, scale: 0.98 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.98 }}
-      transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-      className={`min-h-screen flex flex-col pt-24 lg:pt-32 px-4 lg:px-12 max-w-4xl mx-auto pb-32 transition-all duration-1000 ${chatMode ? 'justify-start' : 'justify-center -mt-20'}`}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+      className="pt-32 lg:pt-48 px-6 lg:px-12 max-w-5xl mx-auto space-y-16 lg:space-y-24 min-h-screen pb-32"
     >
+       <section className="flex flex-col lg:flex-row lg:justify-between lg:items-end gap-12 pb-12 border-b border-deep-navy/10">
+         <div className="space-y-6">
+           <div className="flex items-center gap-4">
+             <span className="w-8 h-[1px] bg-muted-gold"></span>
+             <span className="text-[10px] uppercase font-bold tracking-[0.3em] text-deep-navy/40">ERA Konversasjon</span>
+           </div>
+           <h1 className="text-5xl lg:text-7xl font-display font-medium text-deep-navy tracking-tight leading-tight">
+             Spør assistenten.
+           </h1>
+           <p className="text-xl text-deep-navy/50 font-light max-w-2xl text-balance">
+             Hva lurer du på angående boligen din? Spør om vedlikehold, dokumenter, eller historikk.
+           </p>
+         </div>
+         <div className="w-16 h-16 bg-white shadow-xl flex items-center justify-center shrink-0 border border-deep-navy/5">
+            <Sparkles size={28} className="text-muted-gold" />
+         </div>
+       </section>
+
        {!chatMode ? (
-         <div className="space-y-12 w-full">
-            <div className="flex justify-center mb-8">
-               <div className="w-16 h-16 bg-white shadow-2xl flex items-center justify-center relative">
-                 <div className="absolute inset-0 bg-muted-gold/10 blur-xl animate-pulse" />
-                 <Sparkles size={28} className="text-muted-gold relative z-10" />
-               </div>
-            </div>
-            
-            <h1 className="text-4xl lg:text-6xl font-display text-deep-navy text-center text-balance">
-              Hva vil du vite om boligen din?
-            </h1>
-            
-            <form onSubmit={handleSubmit} className="relative max-w-2xl mx-auto w-full group">
+         <div className="space-y-12 max-w-3xl">
+            <form onSubmit={handleSubmit} className="relative w-full group">
                <div className="absolute -inset-1 bg-gradient-to-r from-muted-gold/0 via-muted-gold/20 to-muted-gold/0 rounded-none blur opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
                <input 
                  type="text" 
                  value={inputValue}
                  onChange={(e) => setInputValue(e.target.value)}
-                 placeholder="Spør om vedlikehold, dokumenter eller råd..." 
+                 placeholder="Eksempel: Har du rensing av takrenner registrert?" 
                  className="w-full relative z-10 bg-white border border-deep-navy/10 px-6 py-6 lg:py-8 text-lg lg:text-xl text-deep-navy placeholder:text-deep-navy/30 focus:outline-none focus:border-muted-gold/50 transition-shadow transition-colors duration-500 shadow-[0_10px_40px_rgba(8,20,38,0.03)] focus:shadow-[0_10px_40px_rgba(8,20,38,0.08)]" 
                />
                <button type="submit" className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-midnight text-white p-3 hover:bg-muted-gold transition-colors">
@@ -1694,7 +1924,7 @@ function EraTab({ onOpenProjectBrief }: { key?: string, onOpenProjectBrief?: () 
                </button>
             </form>
 
-            <div className="pt-8 max-w-2xl mx-auto w-full h-32 relative">
+            <div className="pt-2 w-full h-32 relative">
                <AnimatePresence mode="wait">
                  <motion.div 
                    key={currentIdea}
@@ -1703,13 +1933,13 @@ function EraTab({ onOpenProjectBrief }: { key?: string, onOpenProjectBrief?: () 
                    animate={{ opacity: 1, filter: 'blur(0px)', y: 0 }}
                    exit={{ opacity: 0, filter: 'blur(8px)', y: -10 }}
                    transition={{ duration: 1.2, ease: "easeInOut" }}
-                   className="absolute inset-0 flex flex-col items-center justify-center text-center space-y-4 cursor-pointer group"
+                   className="absolute inset-0 flex flex-col items-start justify-center space-y-3 cursor-pointer group"
                  >
                    <div className="text-[10px] uppercase font-bold tracking-[0.25em] text-deep-navy/40 flex items-center gap-2">
                       <Sparkles size={12} className="text-muted-gold" />
-                      {ideas[currentIdea].tag}
+                      {ideas[currentIdea].tag} (Foreslått)
                    </div>
-                   <p className="text-lg lg:text-xl text-deep-navy/70 font-light group-hover:text-deep-navy transition-colors duration-500 text-balance px-4">
+                   <p className="text-lg lg:text-xl text-deep-navy/70 font-light group-hover:text-deep-navy transition-colors duration-500 text-balance">
                      "{ideas[currentIdea].title}"
                    </p>
                  </motion.div>
@@ -1720,15 +1950,8 @@ function EraTab({ onOpenProjectBrief }: { key?: string, onOpenProjectBrief?: () 
          <motion.div 
            initial={{ opacity: 0, y: 20 }}
            animate={{ opacity: 1, y: 0 }}
-           className="w-full flex flex-col space-y-10"
+           className="w-full flex flex-col space-y-10 max-w-3xl"
          >
-            <div className="text-center pb-8 border-b border-deep-navy/10 flex flex-col items-center gap-4">
-              <div className="w-12 h-12 bg-white shadow-xl flex items-center justify-center">
-                 <Sparkles size={20} className="text-muted-gold" />
-              </div>
-              <h2 className="text-[10px] uppercase font-bold tracking-[0.3em] text-deep-navy/40">ERA Kontekstuell AI-rådgiver</h2>
-            </div>
-            
             <div className="flex-1 space-y-8 overflow-y-auto pb-24">
               {messages.map((msg, idx) => (
                 <motion.div 
