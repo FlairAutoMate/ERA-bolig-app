@@ -612,7 +612,7 @@ function DocumentAnalyzerOverlay({ onClose, onArchive, onOpenProjectBrief }: { o
 }
 
 
-function HomeTab({ maintenanceScore, onOpenCamera, onOpenDocUpload, onOpenProjectBrief, onOpenDataModel }: { maintenanceScore: number, onOpenCamera?: () => void, onOpenDocUpload?: () => void, onOpenProjectBrief?: () => void, onOpenDataModel?: () => void }) {
+function HomeTab({ maintenanceScore, onOpenCamera, onOpenDocUpload, onOpenProjectBrief, onOpenDataModel }: { key?: string, maintenanceScore: number, onOpenCamera?: () => void, onOpenDocUpload?: () => void, onOpenProjectBrief?: () => void, onOpenDataModel?: () => void }) {
   const { scrollY } = useScroll();
   const y = useTransform(scrollY, [0, 1000], [0, 200]);
 
@@ -807,7 +807,7 @@ function HomeTab({ maintenanceScore, onOpenCamera, onOpenDocUpload, onOpenProjec
   );
 }
 
-function PlanTab({ hasRequestedQuotes, quotesArrived, acceptedQuote, onAcceptQuote, onOpenProjectBrief, onOpenDataModel }: { hasRequestedQuotes?: boolean, quotesArrived?: boolean, acceptedQuote?: string | null, onAcceptQuote?: (id: string) => void, onOpenProjectBrief?: (id: string) => void, onOpenDataModel?: () => void }) {
+function PlanTab({ hasRequestedQuotes, quotesArrived, acceptedQuote, onAcceptQuote, onOpenProjectBrief, onOpenDataModel }: { key?: string, hasRequestedQuotes?: boolean, quotesArrived?: boolean, acceptedQuote?: string | null, onAcceptQuote?: (id: string) => void, onOpenProjectBrief?: (id: string) => void, onOpenDataModel?: () => void }) {
   const [isGenerating, setIsGenerating] = useState(false);
 
   return (
@@ -1588,7 +1588,7 @@ function CraftsmanBriefView({ onClose }: { onClose: () => void }) {
   )
 }
 
-function JournalTab({ timeline, onOpenDocUpload }: { timeline: any[], onOpenDocUpload?: () => void }) {
+function JournalTab({ timeline, onOpenDocUpload }: { key?: string, timeline: any[], onOpenDocUpload?: () => void }) {
   return (
     <motion.main 
       initial={{ opacity: 0, y: 10 }}
@@ -1825,7 +1825,7 @@ function JournalTab({ timeline, onOpenDocUpload }: { timeline: any[], onOpenDocU
   )
 }
 
-function EraTab({ onOpenProjectBrief }: { onOpenProjectBrief?: () => void }) {
+function EraTab({ onOpenProjectBrief }: { key?: string, onOpenProjectBrief?: () => void }) {
   const [currentIdea, setCurrentIdea] = useState(0);
   const [inputValue, setInputValue] = useState("");
   const [chatMode, setChatMode] = useState(false);
